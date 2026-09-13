@@ -1,0 +1,77 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Unbounded", sans-serif;
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-serif: "Instrument Serif", Georgia, serif;
+
+  --color-void: #070707;
+  --color-surface: #0e0e0e;
+  --color-panel: #121212;
+  --color-line: #222222;
+  --color-line-strong: #2e2e2e;
+  --color-bone: #efeee9;
+  --color-mute: #8a8a8a;
+  --color-dim: #5c5c5c;
+  --color-cream: #f2f2f0;
+  --color-ok: #efeee9;
+  --color-warn: #bdbdbd;
+  --color-danger: #7a7a7a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--color-void);
+  color: var(--color-bone);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: #efeee9;
+  color: #070707;
+}
+
+.dot-grid {
+  background-image: radial-gradient(rgba(239, 238, 233, 0.09) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+.frame-inset {
+  box-shadow: inset 0 0 0 1px rgba(239, 238, 233, 0.12);
+}
+
+@keyframes spin-slow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 18s linear infinite;
+}
+
+.scroll-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 999px;
+}
+
+.scroll-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
