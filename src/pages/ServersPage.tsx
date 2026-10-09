@@ -69,7 +69,7 @@ function ServerCard({
           <p className="text-[10px] tracking-[0.2em] text-dim">{String(index + 1).padStart(2, '0')}</p>
           <p className="mt-2 font-display text-xl font-semibold tracking-[-0.03em]">{server.name}</p>
           <p className="mt-2 text-sm text-mute">
-            {server.provider} · {server.region}
+            {[server.provider, server.region].filter((v) => v && v !== '—').join(' · ')}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -101,7 +101,7 @@ function ServerCard({
 
       {reporting ? (
         <>
-          <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div className="mt-6 grid grid-cols-2 gap-4 2xl:grid-cols-4">
             <Fact label="OS" value={server.os ?? '—'} />
             <Fact label="Uptime" value={server.uptime} />
             <Fact label="CPU cores" value={server.cores ? String(server.cores) : '—'} />
