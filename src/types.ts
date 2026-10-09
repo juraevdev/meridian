@@ -48,6 +48,17 @@ export type Server = {
   ram: number
   disk: number
   uptime: string
+  hostname?: string
+  os?: string
+  kernel?: string
+  cores?: number
+  memTotalKb?: number
+  memUsedKb?: number
+  diskTotalKb?: number
+  diskUsedKb?: number
+  load?: number[]
+  containersRunning?: number
+  lastSeen?: string
 }
 
 export type Container = {

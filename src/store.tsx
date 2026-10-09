@@ -14,6 +14,7 @@ import {
   refreshDomainStatus,
   type DomainCheck,
 } from './domainCheck'
+import { applyReport, fetchServerStatus } from './serverMetrics'
 import {
   emptyStore,
   slugify,
@@ -30,6 +31,22 @@ import {
 
 const STORAGE_KEY = 'meridian.store.v2'
 const SEED_KEY = 'meridian.seed.version'
+const HIDDEN_SERVERS_KEY = 'meridian.hiddenServers'
+const METRICS_POLL_MS = 60_000
+
+function hiddenServerIds() {
+  try {
+    return new Set<string>(JSON.parse(localStorage.getItem(HIDDEN_SERVERS_KEY) ?? '[]'))
+  } catch {
+    return new Set<string>()
+  }
+}
+
+function hideServerId(id: string) {
+  const ids = hiddenServerIds()
+  ids.add(id)
+  localStorage.setItem(HIDDEN_SERVERS_KEY, JSON.stringify([...ids]))
+}
 
 type StoreApi = StoreData & {
   ready: boolean
@@ -73,6 +90,8 @@ type StoreApi = StoreData & {
   reseedFromDisk: () => void
   domainSync: { syncing: boolean; error: string | null }
   syncDomains: (force: boolean) => Promise<void>
+  metricsError: string | null
+  syncServers: () => Promise<void>
 }
 
 const StoreContext = createContext<StoreApi | null>(null)
@@ -178,6 +197,49 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (ready) void syncDomains(false)
   }, [ready, syncDomains])
+
+  const [metricsError, setMetricsError] = useState<string | null>(null)
+
+  const syncServers = useCallback(async () => {
+    try {
+      const reports = await fetchServerStatus()
+      const hidden = hiddenServerIds()
+      set((prev) => {
+        const known = new Set(prev.servers.map((s) => s.id))
+        const discovered = Object.values(reports)
+          .filter((r) => !known.has(r.serverId) && !hidden.has(r.serverId))
+          .map<Server>((r) => ({
+            id: r.serverId,
+            name: r.name ?? r.hostname ?? r.serverId,
+            projectId: '',
+            provider: 'Auto-discovered',
+            region: '—',
+            ip: r.hostname ?? '—',
+            status: r.status,
+            cpu: 0,
+            ram: 0,
+            disk: 0,
+            uptime: '—',
+          }))
+        return {
+          ...prev,
+          servers: [...prev.servers, ...discovered].map((s) =>
+            reports[s.id] ? applyReport(s, reports[s.id]) : s,
+          ),
+        }
+      })
+      setMetricsError(null)
+    } catch (err) {
+      setMetricsError(err instanceof Error ? err.message : String(err))
+    }
+  }, [set])
+
+  useEffect(() => {
+    if (!ready) return
+    void syncServers()
+    const timer = window.setInterval(() => void syncServers(), METRICS_POLL_MS)
+    return () => window.clearInterval(timer)
+  }, [ready, syncServers])
 
   const api = useMemo<StoreApi>(() => {
     const getProject = (idOrSlug: string) =>
@@ -308,6 +370,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         }))
       },
       removeServer: (id) => {
+        hideServerId(id)
         set((prev) => ({
           ...prev,
           servers: prev.servers.filter((s) => s.id !== id),
@@ -373,8 +436,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       },
       domainSync,
       syncDomains,
+      metricsError,
+      syncServers,
     }
-  }, [data, ready, set, domainSync, syncDomains])
+  }, [data, ready, set, domainSync, syncDomains, metricsError, syncServers])
 
   return <StoreContext.Provider value={api}>{children}</StoreContext.Provider>
 }

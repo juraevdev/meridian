@@ -5,6 +5,7 @@ import net from 'node:net'
 import path from 'node:path'
 import tls from 'node:tls'
 import { fileURLToPath } from 'node:url'
+import { agentFromAuthHeader, initMetrics, recordReport, serverStatuses } from './metrics.mjs'
 
 const PORT = Number(process.env.PORT ?? 8790)
 const HOST = process.env.HOST ?? '127.0.0.1'
@@ -330,6 +331,17 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, { results: pick(names) })
     }
 
+    if (req.method === 'GET' && url.pathname === '/api/servers/status') {
+      return send(res, 200, { servers: serverStatuses() })
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/agent/report') {
+      const serverId = agentFromAuthHeader(req.headers.authorization)
+      if (!serverId) throw new HttpError(401, 'invalid agent token')
+      recordReport(serverId, await readJson(req))
+      return send(res, 200, { ok: true })
+    }
+
     send(res, 404, { error: 'not found' })
   } catch (err) {
     const status = err instanceof HttpError ? err.status : 500
@@ -339,6 +351,7 @@ const server = http.createServer(async (req, res) => {
 })
 
 await loadState()
+await initMetrics(DATA_DIR)
 server.listen(PORT, HOST, () => {
   console.log(`[meridian-api] listening on http://${HOST}:${PORT} (data: ${DATA_FILE})`)
 })
