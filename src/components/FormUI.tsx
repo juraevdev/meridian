@@ -34,6 +34,7 @@ export function Modal({
             exit={{ opacity: 0 }}
             onClick={onClose}
           />
+          <div className="pointer-events-none fixed inset-0 z-[90] flex items-start justify-center px-4 pt-[8vh]">
           <motion.div
             role="dialog"
             aria-modal="true"
@@ -41,7 +42,7 @@ export function Modal({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 16 }}
             transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-            className="fixed inset-x-4 top-[8vh] z-[90] mx-auto max-h-[84vh] max-w-xl overflow-auto border border-line bg-void scroll-thin sm:inset-x-auto"
+            className="pointer-events-auto max-h-[84vh] w-full max-w-xl overflow-auto border border-line bg-void scroll-thin"
           >
             <div className="sticky top-0 flex items-start justify-between gap-4 border-b border-line bg-void px-5 py-4">
               <div>
@@ -61,6 +62,7 @@ export function Modal({
             </div>
             <div className="px-5 py-5">{children}</div>
           </motion.div>
+          </div>
         </>
       ) : null}
     </AnimatePresence>
