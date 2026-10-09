@@ -27,10 +27,13 @@ export type Domain = {
   name: string
   projectId: string
   registrar: string
-  ssl: 'valid' | 'expiring' | 'none'
+  ssl: 'valid' | 'expiring' | 'invalid' | 'none'
   expiresAt: string
+  sslExpiresAt?: string
   dns: 'ok' | 'warn' | 'error'
   status: Status
+  checkedAt?: string
+  checkError?: string
 }
 
 export type Server = {

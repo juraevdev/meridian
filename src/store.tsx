@@ -9,6 +9,12 @@ import {
 } from 'react'
 import { cloudeSeed, SEED_VERSION } from './seed'
 import {
+  fetchDomainStatus,
+  normalizeDomainName,
+  refreshDomainStatus,
+  type DomainCheck,
+} from './domainCheck'
+import {
   emptyStore,
   slugify,
   uid,
@@ -65,6 +71,8 @@ type StoreApi = StoreData & {
   clearAll: () => void
   replaceAll: (data: StoreData) => void
   reseedFromDisk: () => void
+  domainSync: { syncing: boolean; error: string | null }
+  syncDomains: (force: boolean) => Promise<void>
 }
 
 const StoreContext = createContext<StoreApi | null>(null)
@@ -113,6 +121,63 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const set = useCallback((updater: (prev: StoreData) => StoreData) => {
     setData(updater)
   }, [])
+
+  const [domainSync, setDomainSync] = useState<{ syncing: boolean; error: string | null }>({
+    syncing: false,
+    error: null,
+  })
+
+  const domainKey = useMemo(
+    () =>
+      [...new Set(data.domains.map((d) => normalizeDomainName(d.name)).filter(Boolean))]
+        .sort()
+        .join(','),
+    [data.domains],
+  )
+
+  const applyDomainChecks = useCallback(
+    (results: Record<string, DomainCheck>) => {
+      set((prev) => ({
+        ...prev,
+        domains: prev.domains.map((d) => {
+          const r = results[normalizeDomainName(d.name)]
+          if (!r) return d
+          return {
+            ...d,
+            registrar: r.registrar ?? d.registrar,
+            expiresAt: r.expiresAt ?? d.expiresAt,
+            sslExpiresAt: r.sslExpiresAt,
+            ssl: r.ssl,
+            dns: r.dns,
+            status: r.status,
+            checkedAt: r.checkedAt,
+            checkError: r.error,
+          }
+        }),
+      }))
+    },
+    [set],
+  )
+
+  const syncDomains = useCallback(
+    async (force: boolean) => {
+      const names = domainKey ? domainKey.split(',') : []
+      if (names.length === 0) return
+      setDomainSync({ syncing: true, error: null })
+      try {
+        const results = force ? await refreshDomainStatus(names) : await fetchDomainStatus(names)
+        applyDomainChecks(results)
+        setDomainSync({ syncing: false, error: null })
+      } catch (err) {
+        setDomainSync({ syncing: false, error: err instanceof Error ? err.message : String(err) })
+      }
+    },
+    [domainKey, applyDomainChecks],
+  )
+
+  useEffect(() => {
+    if (ready) void syncDomains(false)
+  }, [ready, syncDomains])
 
   const api = useMemo<StoreApi>(() => {
     const getProject = (idOrSlug: string) =>
@@ -306,8 +371,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         localStorage.setItem(SEED_KEY, SEED_VERSION)
         set(() => cloudeSeed)
       },
+      domainSync,
+      syncDomains,
     }
-  }, [data, ready, set])
+  }, [data, ready, set, domainSync, syncDomains])
 
   return <StoreContext.Provider value={api}>{children}</StoreContext.Provider>
 }

@@ -20,7 +20,7 @@ export function OverviewPage() {
   const alerts = [
     ...servers.filter((s) => s.status === 'degraded'),
     ...applications.filter((a) => a.status === 'degraded'),
-    ...domains.filter((d) => d.status === 'expiring'),
+    ...domains.filter((d) => ['expiring', 'degraded', 'offline'].includes(d.status)),
   ]
 
   if (!ready) return null
@@ -151,7 +151,8 @@ export function OverviewPage() {
                       {'cpu' in item
                         ? `CPU ${item.cpu}% — elevated load`
                         : 'ssl' in item
-                          ? `SSL expires ${item.expiresAt}`
+                          ? (item.checkError ??
+                            `Domain ${item.expiresAt} · SSL ${item.sslExpiresAt ?? '—'}`)
                           : `Latency ${'latencyMs' in item ? item.latencyMs : '—'} ms`}
                     </p>
                   </motion.div>

@@ -317,6 +317,7 @@ export function DomainFormModal({
               <TextSelect value={ssl} onChange={(e) => setSsl(e.target.value as Domain['ssl'])}>
                 <option value="valid">valid</option>
                 <option value="expiring">expiring</option>
+                <option value="invalid">invalid</option>
                 <option value="none">none</option>
               </TextSelect>
             </Field>
